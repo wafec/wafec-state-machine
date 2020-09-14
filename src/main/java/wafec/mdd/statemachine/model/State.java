@@ -1,4 +1,4 @@
-package wafec.mdd.statemachine.modeling;
+package wafec.mdd.statemachine.model;
 
 import wafec.mdd.statemachine.core.StateBase;
 import wafec.mdd.statemachine.core.StateContext;

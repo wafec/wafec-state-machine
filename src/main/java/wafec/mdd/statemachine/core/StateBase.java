@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class StateBase {
-    @Getter
+    @Getter @Setter
     private String uuid;
     @Setter @Getter
     private String name;
@@ -28,6 +28,8 @@ public class StateBase {
     @Getter
     protected boolean countable;
     private StateTransition currentStateTransition;
+    @Getter @Setter
+    private boolean initial;
 
     public StateBase() {
         this(null);
@@ -116,19 +118,21 @@ public class StateBase {
     }
 
     public void accept(StateEvent stateEvent) {
+        stateEvent.historyPush(this);
         if (this.stateTransitionConsumer) {
             for (var arrow : this.arrowList) {
-                if (!this.isActive() || arrow.parent != this)
-                    arrow.accept(StateTransition.of(stateEvent, this));
+                arrow.accept(StateTransition.of(stateEvent, this));
             }
         }
     }
 
     public void accept(StateTransition stateTransition) {
+        stateTransition.getStateEvent().historyPush(this);
         this.currentStateTransition = stateTransition;
         if (this.stateTransitionConsumer) {
             this.stateContext.beginTransaction();
-            stateTransition.getSource().setActive(false);
+            if (!this.isInitial())
+                stateTransition.getSource().setActive(false);
             this.setActive(true);
             this.stateContext.endTransaction();
             this.accept(stateTransition.getStateEvent());

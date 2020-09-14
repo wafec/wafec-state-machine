@@ -7,5 +7,7 @@ public enum SerializedStateBaseType {
     GUARD,
     ENTRY_ACTION,
     EXIT_ACTION,
-    ACTION
+    ACTION,
+    REFERENCE,
+    EVENT
 }

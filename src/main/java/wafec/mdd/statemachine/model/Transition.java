@@ -1,4 +1,4 @@
-package wafec.mdd.statemachine.modeling;
+package wafec.mdd.statemachine.model;
 
 import wafec.mdd.statemachine.core.StateBase;
 import wafec.mdd.statemachine.core.StateEvent;
@@ -33,5 +33,17 @@ public class Transition extends StateBase {
                 super.accept(stateTransition);
             }
         }
+    }
+
+    public void addEvent(StateEvent event) {
+        this.stateEventList.add(event);
+    }
+
+    public void addGuard(Guard guard) {
+        this.guardList.add(guard);
+    }
+
+    public void addAction(Action action) {
+        this.actionList.add(action);
     }
 }

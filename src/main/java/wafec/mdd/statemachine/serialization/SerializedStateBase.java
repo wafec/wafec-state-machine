@@ -12,6 +12,4 @@ public class SerializedStateBase {
     private String uuid;
     private String name;
     private List<SerializedStateBase> children;
-    @JsonProperty("arrow-list")
-    private List<SerializedStateBase> arrowList;
 }

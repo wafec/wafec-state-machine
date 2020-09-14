@@ -52,7 +52,8 @@ public class StateContext {
     }
 
     public void fireEvent(StateEvent stateEvent) {
-        for (var active : Lists.reverse(this.activeList)) {
+        var reverse = Lists.reverse(this.activeList).toArray(new StateBase[this.activeList.size()]);
+        for (var active : reverse) {
             if (active.isActive()) {
                 active.accept(stateEvent);
             }
