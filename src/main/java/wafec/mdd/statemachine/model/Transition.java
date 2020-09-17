@@ -1,49 +1,37 @@
 package wafec.mdd.statemachine.model;
 
-import wafec.mdd.statemachine.core.StateBase;
+import wafec.mdd.statemachine.core.PseudoStateBase;
 import wafec.mdd.statemachine.core.StateEvent;
 import wafec.mdd.statemachine.core.StateTransition;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Transition extends StateBase {
-    private List<StateEvent> stateEventList;
-    private List<Guard> guardList;
-    private List<Action> actionList;
+public class Transition extends PseudoStateBase {
+    private List<StateEvent> eventSet;
 
-    public Transition() {
-        super();
-        this.initializeComponent();
+    @Override
+    public void initializeComponent() {
+        super.initializeComponent();
+        eventSet = new ArrayList<>();
     }
 
-    private void initializeComponent() {
-        this.countable = false;
-        this.stateEventList = new ArrayList<>();
-        this.guardList = new ArrayList<>();
-        this.actionList = new ArrayList<>();
+    @Override
+    public void accept(final StateEvent stateEvent) {
+        throw new IllegalStateException();
     }
 
     @Override
     public void accept(final StateTransition stateTransition) {
-        var matches = stateEventList.size() == 0 ? 1 : (int) stateEventList.stream().filter(stateEvent -> stateEvent.match(stateTransition.getStateEvent())).count();
-        if (matches > 0) {
-            if (guardList.size() == 0 || guardList.stream().anyMatch(guard -> guard.test(stateTransition))) {
-                actionList.forEach(action -> action.execute(stateTransition));
-                super.accept(stateTransition);
+        if (eventSet.isEmpty() || eventSet.stream().anyMatch(stateEvent -> stateEvent.match(stateTransition.getStateEvent()))) {
+            for (var arrow : arrowSet) {
+                arrow.accept(stateTransition);
             }
         }
     }
 
-    public void addEvent(StateEvent event) {
-        this.stateEventList.add(event);
-    }
-
-    public void addGuard(Guard guard) {
-        this.guardList.add(guard);
-    }
-
-    public void addAction(Action action) {
-        this.actionList.add(action);
+    public void addEvent(final StateEvent stateEvent) {
+        if (eventSet.stream().map(StateEvent::getId).noneMatch(id -> id.equals(stateEvent.getId())))
+            this.eventSet.add(stateEvent);
     }
 }

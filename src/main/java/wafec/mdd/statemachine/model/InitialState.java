@@ -1,19 +1,22 @@
 package wafec.mdd.statemachine.model;
 
-import wafec.mdd.statemachine.core.StateBase;
-import wafec.mdd.statemachine.core.StateContext;
+import wafec.mdd.statemachine.core.PseudoStateBase;
+import wafec.mdd.statemachine.core.StateEvent;
+import wafec.mdd.statemachine.core.StateTransition;
 
-public class InitialState extends StateBase {
-    public InitialState() {
-        this(null);
+public class InitialState extends PseudoStateBase {
+    @Override
+    public void entry() {
+        for (var arrow : arrowSet) {
+            var epsilonStateTransition = StateTransition.of(StateEvent.epsilon(), this);
+            arrow.accept(epsilonStateTransition);
+        }
     }
 
-    public InitialState(StateContext stateContext) {
-        super(stateContext);
-        initializeComponent();
-    }
-
-    private void initializeComponent() {
-        setInitial(true);
+    @Override
+    public void accept(StateTransition stateTransition) {
+        for (var arrow : arrowSet) {
+            arrow.accept(stateTransition);
+        }
     }
 }

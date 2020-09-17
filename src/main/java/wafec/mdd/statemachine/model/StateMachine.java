@@ -1,13 +1,11 @@
 package wafec.mdd.statemachine.model;
 
-import wafec.mdd.statemachine.core.StateContext;
+import wafec.mdd.statemachine.core.Context;
+import wafec.mdd.statemachine.core.StateBase;
 
-public class StateMachine extends State {
-    public StateMachine(StateContext stateContext) {
-        super(stateContext);
-    }
-
-    public StateMachine() {
-        this(null);
+public class StateMachine extends StateBase {
+    public StateMachine(Context context) {
+        super();
+        setContext(context);
     }
 }

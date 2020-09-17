@@ -1,185 +1,214 @@
 package wafec.mdd.statemachine.core;
 
-import com.google.common.collect.Lists;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class StateBase {
+    protected String id;
     @Getter @Setter
-    private String uuid;
-    @Setter @Getter
-    private String name;
-    private StateBase parent;
-    private boolean active;
-    private int activeCount;
-    private List<StateBase> parentList;
-    private ParentChangeListenerCollection parentChangeListenerCollection;
-    @Setter(AccessLevel.PRIVATE)
+    protected String name;
+    protected List<StateBase> hierarchy;
+    protected List<StateBase> entrySet;
+    protected List<StateBase> arrowSet;
+    protected StateBase parent;
+    protected List<StateBase> children;
     @Getter
-    private StateContext stateContext;
-    private List<StateBase> arrowList;
-    @Getter
-    protected boolean stateTransitionConsumer;
-    @Getter
-    protected boolean countable;
-    private StateTransition currentStateTransition;
-    @Getter @Setter
-    private boolean initial;
+    protected boolean active;
+    protected boolean pseudo;
+    protected List<StateBase> subElementList;
+    protected Context outerContext;
+    protected Context context;
 
     public StateBase() {
-        this(null);
+        initializeComponent();
     }
 
-    public StateBase(StateContext stateContext) {
-        this.stateContext = Optional.ofNullable(stateContext).orElseGet(StateContext::new);
-        this.initializeComponent();
+    public void initializeComponent() {
+        id = UUID.randomUUID().toString();
+        entrySet = new ArrayList<>();
+        arrowSet = new ArrayList<>();
+        children = new ArrayList<>();
+        hierarchy = new ArrayList<>();
+        subElementList = new ArrayList<>();
     }
 
-    private void initializeComponent() {
-        uuid = UUID.randomUUID().toString();
-        activeCount = 0;
-        parentList = new ArrayList<>();
-        this.parentChangeListenerCollection = new ParentChangeListenerCollection();
-        this.arrowList = new ArrayList<>();
-        this.stateTransitionConsumer = false;
-        this.countable = true;
-    }
-
-    public void setActive(boolean active) {
-        if (active == this.active)
-            return;
-        this.active = active;
-        if (this.countable) {
-            var value = active ? 1 : -1;
-            for (var parent : parentList) {
-                parent.setActiveCount(parent.activeCount + value);
-            }
-        }
-        this.updateStateContextActive();
-    }
-
-    private void setActiveCount(int activeCount) {
-        if (activeCount == this.activeCount || !this.countable)
-            return;
-        this.activeCount = activeCount;
-        this.updateStateContextActive();
-    }
-
-    private void updateStateContextActive() {
-        if (this.countable) {
-            if (this.isActive()) {
-                this.stateContext.addActive(this);
-            } else {
-                this.stateContext.removeActive(this);
-            }
-        }
-    }
-
-    public boolean isActive() {
-        return this.active || this.activeCount > 0;
-    }
-
-    public boolean isNotActive() {
-        return !this.isActive();
-    }
-
-    public void setParent(StateBase parent) {
-        if (parent == this.parent)
-            return;
-        if (this.parent != null)
-            this.parent.parentChangeListenerCollection.removeListener(this::handleParentChange);
-        if (this.isActive()) {
-            Lists.reverse(this.parentList).forEach(p -> p.setActiveCount(p.activeCount - 1));
-        }
-        this.parent = parent;
-        this.stateContext = this.parent.stateContext;
-        parent.parentChangeListenerCollection.addListener(this::handleParentChange);
-        this.parentList = Stream.concat(parent.parentList.stream(), Stream.of(parent)).collect(Collectors.toList());
-        this.parentChangeListenerCollection.fireChange(this);
-        if (this.isActive()) {
-            Lists.reverse(this.parentList).forEach(p -> p.setActiveCount(p.activeCount + 1));
-        }
-    }
-
-    private void handleParentChange(StateBase target) {
-        int index = 0;
-        for (; index < parentList.size() && parentList.get(index) != target; index++)
-            ;
-        if (index < parentList.size()) {
-            var subList = parentList.subList(index, parentList.size());
-            parentList = Stream.concat(target.parentList.stream(), subList.stream()).collect(Collectors.toList());
-            this.parentChangeListenerCollection.fireChange(this);
-        }
+    public StateBase[] getHierarchy() {
+        var result = new StateBase[hierarchy.size()];
+         hierarchy.toArray(result);
+         return result;
     }
 
     public void accept(StateEvent stateEvent) {
-        stateEvent.historyPush(this);
-        if (this.stateTransitionConsumer) {
-            for (var arrow : this.arrowList) {
-                arrow.accept(StateTransition.of(stateEvent, this));
-            }
+        if (!isActive())
+            return;
+        for (var child : subElementList) {
+            child.accept(stateEvent);
+        }
+        StateTransition stateTransition = StateTransition.of(stateEvent, this);
+        for (var arrow : arrowSet) {
+            arrow.accept(stateTransition);
         }
     }
 
     public void accept(StateTransition stateTransition) {
-        stateTransition.getStateEvent().historyPush(this);
-        this.currentStateTransition = stateTransition;
-        if (this.stateTransitionConsumer) {
-            this.stateContext.beginTransaction();
-            if (!this.isInitial())
-                stateTransition.getSource().setActive(false);
-            this.setActive(true);
-            this.stateContext.endTransaction();
-            this.accept(stateTransition.getStateEvent());
-        } else {
-            for (var arrow : arrowList) {
-                arrow.accept(stateTransition);
+        stateTransition.addTarget(this);
+        transit(stateTransition);
+    }
+
+    public void transit(StateTransition stateTransition) {
+        var source = stateTransition.getSource();
+        var target = stateTransition.getTarget();
+        var sourceHierarchyRootDifferent = source.findHierarchyRootDifferent(target);
+        var targetHierarchyRootDifferent = target.findHierarchyRootDifferent(source);
+        sourceHierarchyRootDifferent.exit();
+        targetHierarchyRootDifferent.entry();
+    }
+
+    public StateBase findHierarchyRootDifferent(StateBase other) {
+        int l = Math.min(hierarchy.size(), other.hierarchy.size());
+        for (int i = 0; i < l; i++) {
+            if (!hierarchy.get(i).id.equals(other.hierarchy.get(i).id)) {
+                return hierarchy.get(i);
             }
         }
-        this.currentStateTransition = null;
+        return this;
+    }
+
+    public void exit() {
+        for (var child : children) {
+            child.exit();
+        }
+        if (active) {
+            handleExit();
+            active = false;
+        }
+    }
+
+    public void handleExit() {
+
+    }
+
+    public void entry() {
+        if (!active) {
+            active = true;
+            handleEntry();
+        }
+        for (var child : entrySet) {
+            child.entry();
+        }
+    }
+
+    public void handleEntry() {
+
+    }
+
+    public void setParent(StateBase parent) {
+        var prevParent = this.parent;
+        this.parent = parent;
+        updateParentChild(prevParent);
+        updateParent();
+        updateContext();
+    }
+
+    public void updateContext() {
+        if (this.parent != null) {
+            if (this.context == null && this.outerContext != this.parent.getContext()) {
+                this.outerContext = this.parent.getContext();
+                this.updateChildrenContext();
+            }
+        }
+    }
+
+    public void updateParent() {
+        var newHierarchy = new ArrayList<StateBase>();
+        if (parent != null) {
+            newHierarchy.addAll(parent.hierarchy);
+            newHierarchy.add(parent);
+        }
+        if (!isHierarchyExactlyEqual(newHierarchy)) {
+            hierarchy = newHierarchy;
+            for (var child : children) {
+                child.updateParent();
+            }
+            for (var child : entrySet) {
+                child.updateParent();
+            }
+            for (var arrow : arrowSet) {
+                arrow.updateParent();
+            }
+        }
+    }
+
+    public boolean isHierarchyExactlyEqual(List<StateBase> other) {
+        var thisHierarchy = hierarchy;
+        if (thisHierarchy == null)
+            thisHierarchy = new ArrayList<>();
+        if (other.size() != this.hierarchy.size())
+            return false;
+        for (int i = 0; i < thisHierarchy.size(); i++) {
+            if (!thisHierarchy.get(i).id.equals(other.get(i).id))
+                return false;
+        }
+        return true;
+    }
+
+    public void updateParentChild(StateBase prevParent) {
+        if (prevParent != null) {
+            prevParent.children = prevParent.children.stream().filter(c -> !c.id.equals(this.id))
+                    .collect(Collectors.toList());
+            prevParent.updateSubElementList();
+        }
+        if (this.parent != null && this.parent.children.stream().noneMatch(c -> c.id.equals(this.id))) {
+            this.parent.children.add(this);
+            this.parent.updateSubElementList();
+        }
+    }
+
+    public void updateSubElementList() {
+        subElementList = this.children.stream().filter(c -> !c.pseudo).collect(Collectors.toList());
     }
 
     public void addArrow(StateBase arrow) {
-        var index = this.arrowList.indexOf(arrow);
-        if (index < 0) {
-            this.arrowList.add(arrow);
+        this.arrowSet.add(arrow);
+    }
+
+    public void addInitial(StateBase initial) {
+        this.entrySet.add(initial);
+    }
+
+    public void setContext(Context context) {
+        this.context = context;
+        updateChildrenContext();
+    }
+
+    public void updateChildrenContext() {
+        for (var child : children) {
+            child.updateChildContext();
+        }
+        for (var child : arrowSet) {
+            child.updateChildContext();
+        }
+        for (var child : entrySet) {
+            child.updateChildContext();
         }
     }
 
-    public void removeArrow(StateBase arrow) {
-        var index = this.arrowList.indexOf(arrow);
-        if (index >= 0) {
-            this.arrowList.remove(index);
+    public void updateChildContext() {
+        if (parent == null)
+            throw new IllegalStateException();
+        if (this.outerContext != parent.getContext()) {
+            this.outerContext = parent.getContext();
+            updateChildrenContext();
         }
     }
 
-    public final void handleEntry() {
-        this.handleEntry(this.currentStateTransition);
-    }
-
-    public void handleEntry(StateTransition stateTransition) {
-
-    }
-
-    public final void handleExit() {
-        this.handleExit(this.currentStateTransition);
-    }
-
-    public void handleExit(StateTransition stateTransition) {
-
-    }
-
-    public String getQualifiedName() {
-        return Optional.ofNullable(this.name).orElse(this.uuid);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s@%s", this.getClass().getCanonicalName(), this.getQualifiedName());
+    public Context getContext() {
+        return Optional.ofNullable(context).orElse(outerContext);
     }
 }

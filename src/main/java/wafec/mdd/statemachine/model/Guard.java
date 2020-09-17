@@ -1,7 +1,6 @@
 package wafec.mdd.statemachine.model;
 
-import wafec.mdd.statemachine.core.StateTransition;
+import wafec.mdd.statemachine.core.StateCallable;
 
-public interface Guard {
-    boolean test(StateTransition stateTransition);
+public class Guard extends StateCallable {
 }

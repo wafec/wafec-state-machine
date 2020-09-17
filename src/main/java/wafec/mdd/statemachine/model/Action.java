@@ -1,7 +1,6 @@
 package wafec.mdd.statemachine.model;
 
-import wafec.mdd.statemachine.core.StateTransition;
+import wafec.mdd.statemachine.core.StateCallable;
 
-public interface Action {
-    void execute(StateTransition stateTransition);
+public class Action extends StateCallable {
 }
