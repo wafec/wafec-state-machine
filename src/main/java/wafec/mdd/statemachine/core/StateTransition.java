@@ -1,5 +1,6 @@
 package wafec.mdd.statemachine.core;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -10,11 +11,19 @@ public class StateTransition {
     private StateEvent stateEvent;
     private List<StateBase> traversingList;
 
+    public StateTransition() {
+        this.initializeComponent();
+    }
+
+    private void initializeComponent() {
+        traversingList = new ArrayList<>();
+    }
+
     public static StateTransition of(StateEvent stateEvent, StateBase source) {
         StateTransition stateTransition = new StateTransition();
         stateTransition.stateEvent = stateEvent;
-        stateTransition.traversingList = new ArrayList<>();
-        stateTransition.traversingList.add(source);
+        stateTransition.addTarget(source);
+        stateTransition.validate();
         return stateTransition;
     }
 
@@ -28,5 +37,11 @@ public class StateTransition {
 
     public StateBase getTarget() {
         return traversingList.get(traversingList.size() - 1);
+    }
+
+    public void validate() {
+        if (!(this.stateEvent instanceof Event)) {
+            throw new IllegalStateException();
+        }
     }
 }

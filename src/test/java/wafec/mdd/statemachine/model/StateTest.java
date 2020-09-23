@@ -2,6 +2,7 @@ package wafec.mdd.statemachine.model;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import wafec.mdd.statemachine.core.Event;
 import wafec.mdd.statemachine.core.StateEvent;
 
 import java.util.Arrays;
@@ -17,7 +18,7 @@ public class StateTest {
         state1.entry();
         Assertions.assertTrue(state1.isActive());
         Assertions.assertFalse(state2.isActive());
-        state1.accept(StateEvent.epsilon());
+        state1.accept(Event.of(StateEvent.epsilon()));
         Assertions.assertFalse(state1.isActive());
         Assertions.assertTrue(state2.isActive());
     }

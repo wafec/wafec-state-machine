@@ -1,6 +1,8 @@
 package wafec.mdd.statemachine.core;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
@@ -8,7 +10,7 @@ import java.util.UUID;
 public class StateEvent {
     private static final StateEvent _epsilon = StateEvent.of("__EPSILON__");
 
-    private String id;
+    protected String id;
 
     public StateEvent() {
         initializeComponent();

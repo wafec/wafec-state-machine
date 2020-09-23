@@ -2,6 +2,7 @@ package wafec.mdd.statemachine.model;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import wafec.mdd.statemachine.core.Event;
 import wafec.mdd.statemachine.core.StateEvent;
 
 public class StateMachineTest {
@@ -73,7 +74,7 @@ public class StateMachineTest {
         transition.addEvent(event);
         transition.addArrow(state1_2_1_1);
         state1_1_1_1.addArrow(transition);
-        state1.accept(event);
+        state1.accept(Event.of(event));
         Assertions.assertFalse(state1_1_1_1.isActive());
         Assertions.assertTrue(state1_2_1_1.isActive());
         Assertions.assertFalse(state1_1_1.isActive());
