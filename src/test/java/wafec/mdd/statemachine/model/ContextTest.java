@@ -72,6 +72,7 @@ public class ContextTest {
     public void testAction() {
         var stackImpl = new StackImpl();
         var context = new Context(stackImpl);
+        context.getConfiguration().name("push").parameter("element").atPosition(0);
         var stm = new StateMachine(context);
         var initial = new InitialState();
         initial.setParent(stm);
