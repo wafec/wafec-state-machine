@@ -10,6 +10,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class StateBase {
+    public static final String COMMAND_ACCEPT_BEGIN = "STATE_BASE_ACCEPT_BEGIN";
+    public static final String COMMAND_ACCEPT_END = "STATE_BASE_ACCEPT_END";
+
     protected String id;
     @Getter @Setter
     protected String name;
@@ -47,6 +50,7 @@ public class StateBase {
     public void accept(StateEvent stateEvent) {
         if (!isActive())
             return;
+        stateEvent.getStateEventContext().addPoint(Point.of(this, 0d, COMMAND_ACCEPT_BEGIN));
         for (var child : subElementList) {
             child.accept(stateEvent);
         }
@@ -54,11 +58,16 @@ public class StateBase {
         for (var arrow : arrowSet) {
             arrow.accept(stateTransition);
         }
+        stateEvent.getStateEventContext().addPoint(Point.of(this, 0d, COMMAND_ACCEPT_END));
     }
 
     public void accept(StateTransition stateTransition) {
+        stateTransition.getStateEvent().getStateEventContext()
+                .addPoint(Point.of(this, 0d, COMMAND_ACCEPT_BEGIN));
         stateTransition.addTarget(this);
         transit(stateTransition);
+        stateTransition.getStateEvent().getStateEventContext()
+                .addPoint(Point.of(this, 0d, COMMAND_ACCEPT_END));
     }
 
     public void transit(StateTransition stateTransition) {
@@ -210,5 +219,13 @@ public class StateBase {
 
     public Context getContext() {
         return Optional.ofNullable(context).orElse(outerContext);
+    }
+
+    @Override
+    public String toString() {
+        String result = Optional.ofNullable(name).orElse(id);
+        if (result.length() > 6)
+            result = result.substring(0, 6);
+        return String.format("%s@%s", this.getClass().getSimpleName(), result);
     }
 }

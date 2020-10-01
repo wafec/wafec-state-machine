@@ -1,14 +1,18 @@
 package wafec.mdd.statemachine.model;
 
-import wafec.mdd.statemachine.core.Event;
-import wafec.mdd.statemachine.core.PseudoStateBase;
-import wafec.mdd.statemachine.core.StateEvent;
-import wafec.mdd.statemachine.core.StateTransition;
+import wafec.mdd.statemachine.core.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Transition extends PseudoStateBase {
+    public static final String COMMAND_TRANSITION_ACCEPT_BEGIN = "TRANSITION_ACCEPT_BEGIN";
+    public static final String COMMAND_TRANSITION_ACCEPT_END = "TRANSITION_ACCEPT_END";
+    public static final String COMMAND_TRANSITION_EVENT_MISMATCH = "TRANSITION_EVENT_MISMATCH";
+    public static final String COMMAND_TRANSITION_EVENT_MATCH = "TRANSITION_EVENT_MATCH";
+    public static final String COMMAND_TRANSITION_GUARD_TRUE = "TRANSITION_GUARD_TRUE";
+    public static final String COMMAND_TRANSITION_GUARD_FALSE = "TRANSITION_GUARD_FALSE";
+
     private List<StateEvent> eventSet;
     private List<Guard> guardSet;
     private List<Action> actionSequence;
@@ -28,16 +32,33 @@ public class Transition extends PseudoStateBase {
 
     @Override
     public void accept(final StateTransition stateTransition) {
+        stateTransition.getStateEvent().getStateEventContext()
+                .addPoint(Point.of(this, 0d, COMMAND_TRANSITION_ACCEPT_BEGIN));
         if (eventSet.isEmpty() || eventSet.stream().anyMatch(stateEvent -> stateEvent.match(stateTransition.getStateEvent()))) {
+            stateTransition.getStateEvent().getStateEventContext()
+                    .addPoint(Point.of(this, 0d, COMMAND_TRANSITION_EVENT_MATCH));
             if (guardSet.isEmpty() || guardSet.stream().anyMatch( guard -> guard.test(this, (Event) stateTransition.getStateEvent()))) {
+                stateTransition.getStateEvent().getStateEventContext()
+                        .addPoint(Point.of(this, 0d, COMMAND_TRANSITION_GUARD_TRUE));
                 for (var action : actionSequence) {
                     action.run(this, (Event) stateTransition.getStateEvent());
                 }
+                stateTransition.getStateEvent().getStateEventContext()
+                        .addPoint(Point.of(this, 0d, COMMAND_TRANSITION_ACCEPT_END));
                 for (var arrow : arrowSet) {
                     arrow.accept(stateTransition);
                 }
+                return;
+            } else {
+                stateTransition.getStateEvent().getStateEventContext()
+                        .addPoint(Point.of(this, 0d, COMMAND_TRANSITION_GUARD_FALSE));
             }
+        } else {
+            stateTransition.getStateEvent().getStateEventContext()
+                    .addPoint(Point.of(this, 0d, COMMAND_TRANSITION_EVENT_MISMATCH));
         }
+        stateTransition.getStateEvent().getStateEventContext()
+                .addPoint(Point.of(this, 0d, COMMAND_TRANSITION_ACCEPT_END));
     }
 
     public void addEvent(final StateEvent stateEvent) {

@@ -11,6 +11,7 @@ public class StateEvent {
     private static final StateEvent _epsilon = StateEvent.of("__EPSILON__");
 
     protected String id;
+    protected StateEventContext stateEventContext;
 
     public StateEvent() {
         initializeComponent();
@@ -18,6 +19,7 @@ public class StateEvent {
 
     protected void initializeComponent() {
         id = UUID.randomUUID().toString();
+        stateEventContext = new StateEventContext();
     }
 
     public boolean match(StateEvent other) {
